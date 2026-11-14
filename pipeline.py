@@ -27,6 +27,7 @@ def main(argv=None):
     parser.add_argument("--threshold", type=float, default=0.5)
     parser.add_argument("--limit", type=int, default=0)
     parser.add_argument("--image-size", type=int, default=320, help="shorter side after the internal resize; raise for small objects")
+    parser.add_argument("--origin", default=None, help="where the dataset came from, recorded in the model card")
     args = parser.parse_args(argv)
 
     output = Path(args.output)
@@ -43,7 +44,7 @@ def main(argv=None):
 
     if args.data:
         data = Path(args.data)
-        origin = f"operator-supplied dataset at {data}"
+        origin = args.origin or f"operator-supplied dataset at {data}"
     else:
         data = output / "dataset"
         step("synthetic", lambda: synthetic.generate(data, args.count, seed=7), f"python synthetic.py --output {data} --count {args.count} --seed 7")

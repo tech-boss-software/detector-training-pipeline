@@ -1,0 +1,18 @@
+{
+  "root": "artifacts\\shwd-dataset",
+  "classes": [
+    "helmet",
+    "head"
+  ],
+  "images": 1500,
+  "negative_images": 0,
+  "objects": 23621,
+  "objects_per_class": {
+    "helmet": 1655,
+    "head": 21966
+  },
+  "problems": [],
+  "orphan_labels": [],
+  "fingerprint": "57e033c05e4f0de2b6bc55a4263501d45acfc7940ad20309b5d5c70e7f1637db",
+  "origin": "Safety Helmet Wearing Dataset (SHWD, MIT licence), random 1500-image subset converted from Pascal VOC"
+}

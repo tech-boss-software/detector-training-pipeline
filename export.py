@@ -80,23 +80,45 @@ def session_for(path, threads):
     return onnxruntime.InferenceSession(str(path), options, providers=["CPUExecutionProvider"])
 
 
+def match_outputs(eager, onnx):
+    """Compare two detection lists order-independently.
+
+    Each list is [(box_xyxy, label, score), ...]. Every eager detection is paired with the
+    nearest ONNX detection of the same label (largest coordinate difference as the distance),
+    so two near-equal-score detections that swap order between runtimes do not read as a
+    400-px error. Returns the worst matched box and score difference, the number of eager
+    detections with no same-label partner, and the count difference.
+    """
+    worst_box, worst_score, unmatched = 0.0, 0.0, 0
+    for box, label, score in eager:
+        candidates = [(max(abs(a - b) for a, b in zip(box, obox)), abs(score - oscore))
+                      for obox, olabel, oscore in onnx if olabel == label]
+        if not candidates:
+            unmatched += 1
+            continue
+        box_diff, score_diff = min(candidates)
+        worst_box, worst_score = max(worst_box, box_diff), max(worst_score, score_diff)
+    return {"max_box_abs_diff": worst_box, "max_score_abs_diff": worst_score, "unmatched": unmatched,
+            "count_difference": abs(len(eager) - len(onnx))}
+
+
 def parity(model, session, records, limit=8):
-    import numpy as np
     import torch
 
-    worst_box, worst_score, mismatches, count_diffs = 0.0, 0.0, 0, 0
+    worst_box, worst_score, unmatched, count_diffs = 0.0, 0.0, 0, 0
     used = 0
     with torch.no_grad():
         for row in records[:limit]:
             tensor = load_image_tensor(row["path"])
             eager = model([tensor])[0]
             boxes, labels, scores = session.run(None, {"image": tensor.numpy()})
-            n = min(len(eager["scores"]), len(scores))
-            count_diffs += abs(len(eager["scores"]) - len(scores))
-            if n:
-                worst_box = max(worst_box, float(np.abs(eager["boxes"][:n].numpy() - boxes[:n]).max()))
-                worst_score = max(worst_score, float(np.abs(eager["scores"][:n].numpy() - scores[:n]).max()))
-                mismatches += int((eager["labels"][:n].numpy() != labels[:n]).sum())
+            left = list(zip(eager["boxes"].tolist(), eager["labels"].tolist(), eager["scores"].tolist()))
+            right = list(zip(boxes.tolist(), labels.tolist(), scores.tolist()))
+            result = match_outputs(left, right)
+            worst_box = max(worst_box, result["max_box_abs_diff"])
+            worst_score = max(worst_score, result["max_score_abs_diff"])
+            unmatched += result["unmatched"]
+            count_diffs += result["count_difference"]
             used += 1
     # A blank image must yield zero detections, not a runtime error, in both runtimes.
     blank = torch.zeros(3, 320, 320)
@@ -104,9 +126,9 @@ def parity(model, session, records, limit=8):
         eager_blank = int(len(model([blank])[0]["scores"]))
     onnx_blank = int(len(session.run(None, {"image": blank.numpy()})[2]))
     return {"images": used, "max_box_abs_diff": worst_box, "max_score_abs_diff": worst_score,
-            "label_mismatches": mismatches, "detection_count_differences": count_diffs,
+            "label_mismatches": unmatched, "detection_count_differences": count_diffs,
             "blank_image_detections": {"torch": eager_blank, "onnxruntime": onnx_blank},
-            "note": "outputs are compared in the model's own confidence order on the same input tensor"}
+            "note": "each PyTorch detection is paired with the nearest ONNX Runtime detection of the same label on the same input tensor; label_mismatches counts detections with no same-label partner"}
 
 
 def latency(model, session, record, threads, runs=20, warmup=3):

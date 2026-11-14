@@ -19,9 +19,9 @@ def render(training, evaluation, export, dataset_report):
               f"`{training['model']['name']}` ({training['model']['weights']}). "
               "**Fine-tuning performed by Tech Boss:** yes, on the dataset described below.", ""]
     lines += ["## Intended use", "",
-              "Demonstrate a reproducible fine-tuning, evaluation and ONNX export pipeline for custom object "
-              "classes. The numbers below describe the synthetic demonstration dataset only; they say nothing "
-              "about any client domain until the pipeline is re-run on representative, licensed client data.", ""]
+              "Detect the classes listed under Data on images like the ones it was trained on, on a CPU machine, "
+              "behind a human-review threshold. The numbers below describe this dataset only; they say nothing "
+              "about another camera, site or labelling policy until the pipeline is re-run on that data.", ""]
     lines += ["## Data", "",
               f"- Source: `{dataset_report['root']}` ({dataset_report.get('origin', 'see DATA_SOURCES.md')})",
               f"- Images: {dataset_report['images']} ({dataset_report['negative_images']} without objects), "
@@ -77,12 +77,16 @@ def render(training, evaluation, export, dataset_report):
               "TorchVision model code and the COCO-pretrained checkpoint are BSD-3-Clause licensed; original "
               "pipeline code is MIT. No AGPL component is used, so the exported model can be deployed in a "
               "client product without copyleft obligations. Confirm the client dataset's own terms separately.", ""]
-    lines += ["## Limitations", "",
-              "- The demonstration dataset is synthetic: flat shapes on noisy backgrounds. High scores here do not "
-              "transfer to photographs, occlusion, small objects, motion blur or class imbalance.",
+    origin = str(dataset_report.get("origin", ""))
+    synthetic = "synthetic" in origin.lower()
+    data_note = ("- The dataset is synthetic: flat shapes on noisy backgrounds. High scores here do not transfer to "
+                 "photographs, occlusion, small objects, motion blur or class imbalance." if synthetic else
+                 "- Scores describe this dataset's images and labelling; crowded scenes, tiny objects and a different "
+                 "label policy move them, so inspect per-class and per-slice results before trusting the mean.")
+    lines += ["## Limitations", "", data_note,
               "- Scores are not calibrated probabilities; the confusion matrix threshold is a choice, not a fact.",
               "- Greedy matching without crowd/ignore semantics differs slightly from pycocotools on crowded scenes.",
-              "- CPU training uses a small input size (320 px); fine detail is lost.",
+              f"- CPU training resizes the shorter side to {cfg.get('image_size', 320)} px; objects of a few pixels are lost.",
               "- No tracking, segmentation, drift monitoring or serving layer is included.", ""]
     lines += ["## Before client deployment", "",
               "Re-run the pipeline on representative licensed data with every object labelled, inspect per-class and "

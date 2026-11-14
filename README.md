@@ -2,7 +2,7 @@
 
 **Tech Boss · fine-tune, evaluate, export.** One command takes a labelled dataset in the YOLO folder layout, validates it, fine-tunes the official TorchVision Faster R-CNN MobileNetV3-Large 320 FPN checkpoint on CPU, evaluates on a held-out split with COCO-style mAP, a confusion matrix and precision-recall curves, exports an ONNX model whose outputs are checked against PyTorch, measures CPU latency, runs ONNX-Runtime-only inference and writes a model card from the measured numbers.
 
-**This is an original pipeline demonstration on synthetic data.** The checked-in numbers describe flat shapes on noisy backgrounds, not any client's photographs. Tech Boss wrote the pipeline, evaluation and export code; the base checkpoint and model code are TorchVision's (BSD-3-Clause). No AGPL component is used.
+**Measured on real photographs.** The checked-in model card comes from a run on 1,500 images of the Safety Helmet Wearing Dataset (SHWD, MIT licence): helmet AP@0.5 0.86, bare-head AP@0.5 0.34 overall and 0.78 on site-like images, with the crowd-scene slice reported separately. Tech Boss wrote the pipeline, evaluation and export code; the base checkpoint and model code are TorchVision's (BSD-3-Clause). No AGPL component is used.
 
 ## Quick start
 
@@ -33,7 +33,31 @@ python pipeline.py --data my-dataset --output artifacts --epochs 12 --origin "cl
 
 Add `--image-size 512` (or more) when the objects are small: the model resizes every image so its shorter side matches this value, and a 12-pixel helmet at 320 becomes a 20-pixel one at 512, at roughly double the latency. The value is stored in the checkpoint and baked into the ONNX graph, so inference needs no extra setting.
 
-This is the layout that Roboflow, CVAT and Label Studio export. An image with no label file counts as a negative image. Validation runs first and lists every problem at once (unknown class id, box outside the image, non-numeric field, orphan label file) instead of failing on the first; training refuses a dataset with problems. The split is a seeded shuffle by image, recorded in `training_log.json`, and a SHA-256 fingerprint of all labels is stored with the checkpoint so evaluation refuses a dataset that changed after training.
+This is the layout that Roboflow, CVAT and Label Studio export. Pascal VOC exports (`JPEGImages/` + `Annotations/*.xml`, the format of many public sets) are converted with `convert_voc.py`, which renames classes on the way and reports unmapped names and dropped boxes:
+
+```sh
+python convert_voc.py --voc VOC2028 --output artifacts/helmets --classes hat=helmet person=head --limit 1500
+```
+
+An image with no label file counts as a negative image. Validation runs first and lists every problem at once (unknown class id, box outside the image, non-numeric field, orphan label file) instead of failing on the first; training refuses a dataset with problems. The split is a seeded shuffle by image, recorded in `training_log.json`, and a SHA-256 fingerprint of all labels is stored with the checkpoint so evaluation refuses a dataset that changed after training.
+
+## Real data: safety helmets
+
+```sh
+python convert_voc.py --voc VOC2028 --output artifacts/shwd-dataset --classes hat=helmet person=head --limit 1500 --seed 0
+python pipeline.py --data artifacts/shwd-dataset --output artifacts/shwd-model --epochs 5 --image-size 512 --threads 4 --cache-dir ../model-cache --origin "SHWD, MIT licence, random 1500-image subset"
+```
+
+SHWD (7,581 photos, classes `hat` and `person`, the latter meaning a bare head) was converted from Pascal VOC, a random 1,500-image subset was split 70/15/15 and trained for 5 epochs at a 512-px resize on a laptop CPU (107 minutes). Held-out test split, 225 images:
+
+| Class | Ground truth | AP@0.5 | AP@[0.5:0.95] |
+|---|---|---|---|
+| helmet | 290 | 0.855 | 0.596 |
+| head | 3644 | 0.336 | 0.151 |
+
+The head score is dominated by the dataset's crowd-counting images (31 test images hold 2,317 heads about 22 px high); on images with up to 20 objects it is 0.78. The per-slice table, the ONNX parity (0.78 px worst box, 0 unmatched detections) and the latency (67 ms per 400x267 image in ONNX Runtime) are in [MODEL_CARD.md](MODEL_CARD.md); the JSON, plots and ONNX-only inference samples are in `examples/shwd-model/`. The sibling safety-video-analytics project runs this model on real site footage.
+
+![SHWD test images: ground truth against predictions](examples/shwd-model/test_examples.jpg)
 
 ## Stages
 
@@ -52,7 +76,7 @@ Each stage is also a standalone CLI; `pipeline.py` writes the exact commands it 
 
 - **mAP@0.5 and mAP@[0.5:0.95]** come from `metrics.py`: class-aware, confidence-ordered, one-to-one greedy matching per image, 101-point interpolated AP, averaged over IoU 0.50 to 0.95. Classes without ground truth in the split are reported as undefined and excluded, never scored zero. Crowd and ignore annotations are not supported; the implementation is unit-tested against hand-computed cases but is not pycocotools.
 - **Confusion matrix** at a chosen score threshold and IoU 0.5, matched class-agnostically so a box in the right place with the wrong label lands off-diagonal instead of in two background cells. Rows are ground truth, columns are predictions; the background row is false positives and the background column is misses.
-- **Parity** compares ONNX Runtime and PyTorch outputs on the same tensors: maximum box and score differences, label mismatches, detection-count differences, and the blank-image case, which must give zero detections in both.
+- **Parity** compares ONNX Runtime and PyTorch outputs on the same tensors: each PyTorch detection is paired with the nearest same-label ONNX detection (two near-equal scores can swap order between runtimes, which is not an error), and the worst box and score difference, unmatched detections, detection-count differences and the blank-image case (zero detections in both) are reported.
 - **Latency** is the median and p95 of single-image runs on this machine after warm-up, for PyTorch eager and ONNX Runtime at the same thread count. It is a local measurement, not a hardware benchmark.
 
 ## Export notes worth knowing
@@ -66,10 +90,10 @@ The exported model accepts an RGB float32 CHW tensor in [0, 1] of any size and r
 
 ## Evidence
 
-`examples/` holds the JSON, plots and annotated outputs of the actual local run described in `DATA_SOURCES.md`; [MODEL_CARD.md](MODEL_CARD.md) was generated from that run. The synthetic dataset is regenerated by seed and not committed.
+`examples/shwd-model/` holds the JSON, plots, model card and ONNX-only inference samples of the SHWD run described in `DATA_SOURCES.md`; [MODEL_CARD.md](MODEL_CARD.md) was generated from it by `model_card.py` and extended with the per-slice table. `examples/` (root) holds the synthetic smoke run with its own card, `examples/MODEL_CARD-synthetic.md`. Weights and datasets are not committed.
 
-![Test images: ground truth vs predictions](examples/test_examples.png)
+![Synthetic smoke test: ground truth vs predictions](examples/test_examples.png)
 
 ## Scope and limitations
 
-Synthetic shapes are easy; the scores say the pipeline works, not that the model would work on photographs. No augmentation beyond horizontal flip, no learning-rate search, no tracking, segmentation, drift monitoring or serving. CPU training uses the 320 px model; small objects and fine detail are lost. See the model card for the deployment checklist.
+One real dataset, one subset, one seed: the SHWD numbers are a measurement of this recipe on that data, not a benchmark. No augmentation beyond horizontal flip, no learning-rate search, no tracking, segmentation, drift monitoring or serving. CPU training keeps the input small (512 px here); heads of 20 px in crowd scenes are mostly lost, as the per-slice table shows. See the model card for the deployment checklist.

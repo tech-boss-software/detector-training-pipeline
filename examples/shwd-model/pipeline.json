@@ -1,0 +1,17 @@
+{
+  "timings_seconds": {
+    "train": 6490.483369399997,
+    "evaluate": 75.33614720000332,
+    "export": 13.610968100001628,
+    "infer": 0.828967699999339,
+    "model_card": 0.04930919999605976
+  },
+  "commands": [
+    "python train.py --data artifacts\\shwd-dataset --threads 4 --cache-dir D:/Tech Boss/cv-cache --output artifacts\\shwd-model --epochs 5 --seed 0 --device cpu --origin Safety Helmet Wearing Dataset (SHWD, MIT licence), random 1500-image subset converted from Pascal VOC --image-size 512",
+    "python evaluate.py --data artifacts\\shwd-dataset --threads 4 --cache-dir D:/Tech Boss/cv-cache --artifacts artifacts\\shwd-model --threshold 0.5 --device cpu",
+    "python export.py --data artifacts\\shwd-dataset --threads 4 --cache-dir D:/Tech Boss/cv-cache --artifacts artifacts\\shwd-model",
+    "python infer.py --model artifacts\\shwd-model\\model.onnx --input artifacts\\shwd-dataset\\images\\001517.jpg artifacts\\shwd-dataset\\images\\PartA_01341.jpg artifacts\\shwd-dataset\\images\\part2_001154.jpg --output artifacts\\shwd-model\\inference --threshold 0.5 --threads 4",
+    "python model_card.py --artifacts artifacts\\shwd-model --output artifacts\\shwd-model\\MODEL_CARD.md"
+  ],
+  "total_seconds": 6580.3087615999975
+}

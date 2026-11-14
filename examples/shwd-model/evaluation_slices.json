@@ -1,0 +1,54 @@
+{
+  "split": "test",
+  "slices": {
+    "up to 20 objects": {
+      "images": 171,
+      "objects": 851,
+      "median_object_height_px": 56.0,
+      "map50": 0.8175262761084856,
+      "per_class": {
+        "helmet": {
+          "ground_truth": 259,
+          "ap50": 0.8538836337037712
+        },
+        "head": {
+          "ground_truth": 592,
+          "ap50": 0.7811689185132
+        }
+      }
+    },
+    "21 to 50 objects": {
+      "images": 23,
+      "objects": 766,
+      "median_object_height_px": 27.999839999999978,
+      "map50": 0.7387043582732485,
+      "per_class": {
+        "helmet": {
+          "ground_truth": 31,
+          "ap50": 0.9215876944837335
+        },
+        "head": {
+          "ground_truth": 735,
+          "ap50": 0.5558210220627636
+        }
+      }
+    },
+    "more than 50 objects (crowd scenes)": {
+      "images": 31,
+      "objects": 2317,
+      "median_object_height_px": 22.000233999999992,
+      "map50": 0.1425552545942427,
+      "per_class": {
+        "helmet": {
+          "ground_truth": 0,
+          "ap50": null
+        },
+        "head": {
+          "ground_truth": 2317,
+          "ap50": 0.1425552545942427
+        }
+      }
+    }
+  },
+  "note": "same matching as evaluation.json, restricted to test images grouped by their number of labelled objects"
+}

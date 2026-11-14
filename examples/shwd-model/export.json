@@ -1,0 +1,46 @@
+{
+  "exporter": "torch.onnx.export (TorchScript-based, dynamo=False), traced on a labelled training image",
+  "opset": 11,
+  "decode_patch": "BoxCoder.decode reshapes use -1 on the row axis so empty proposal sets export",
+  "size_mb": 75.985179,
+  "sha256": "c968653286e8126c9c35fc8ca80446012d777c66d344f064b0970c9d8d2a651b",
+  "onnx": "1.23.2",
+  "inputs": [
+    "image"
+  ],
+  "outputs": [
+    "boxes",
+    "labels",
+    "scores"
+  ],
+  "onnxruntime": "1.32.0",
+  "parity": {
+    "images": 8,
+    "max_box_abs_diff": 0.7753677368164062,
+    "max_score_abs_diff": 0.007330566644668579,
+    "label_mismatches": 0,
+    "detection_count_differences": 0,
+    "blank_image_detections": {
+      "torch": 0,
+      "onnxruntime": 0
+    },
+    "note": "each PyTorch detection is paired with the nearest ONNX Runtime detection of the same label on the same input tensor; label_mismatches counts detections with no same-label partner"
+  },
+  "latency": {
+    "width": 400,
+    "height": 267,
+    "threads": 4,
+    "runs": 20,
+    "warmup": 3,
+    "torch_median_ms": 174.8891499992169,
+    "torch_p95_ms": 217.0983999967575,
+    "onnxruntime_median_ms": 67.25534999714,
+    "onnxruntime_p95_ms": 81.03839999967022,
+    "cpu": "Intel64 Family 6 Model 154 Stepping 3, GenuineIntel",
+    "image": "001517.jpg"
+  },
+  "classes": [
+    "helmet",
+    "head"
+  ]
+}

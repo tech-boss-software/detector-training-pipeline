@@ -1,0 +1,11 @@
+{
+  "source": "D:\\Tech Boss\\cv-data\\shwd\\VOC2028",
+  "images": 1500,
+  "skipped_images": 0,
+  "objects": {
+    "helmet": 1655,
+    "head": 21966
+  },
+  "unmapped": {},
+  "dropped_boxes": 0
+}

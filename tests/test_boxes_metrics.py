@@ -101,3 +101,21 @@ class MetricTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ParityMatchingTests(unittest.TestCase):
+    def test_swapped_order_is_not_an_error_but_a_missing_partner_is(self):
+        from export import match_outputs
+
+        a = ([10, 10, 50, 50], 1, 0.91)
+        b = ([200, 20, 260, 90], 1, 0.90)
+        c = ([5, 5, 30, 30], 2, 0.40)
+        result = match_outputs([a, b, c], [b, a, c])
+        self.assertEqual(result["max_box_abs_diff"], 0.0)
+        self.assertEqual(result["unmatched"], 0)
+        moved = ([10, 10, 50, 52.5], 1, 0.905)
+        result = match_outputs([a, b, c], [b, moved])
+        self.assertAlmostEqual(result["max_box_abs_diff"], 2.5)
+        self.assertAlmostEqual(result["max_score_abs_diff"], 0.005)
+        self.assertEqual(result["unmatched"], 1)
+        self.assertEqual(result["count_difference"], 1)
