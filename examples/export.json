@@ -1,0 +1,47 @@
+{
+  "exporter": "torch.onnx.export (TorchScript-based, dynamo=False), traced on a labelled training image",
+  "opset": 11,
+  "decode_patch": "BoxCoder.decode reshapes use -1 on the row axis so empty proposal sets export",
+  "size_mb": 76.005695,
+  "sha256": "74edf26d455d64dcebccf91b9b9693753d0493ee8eee03d7b18bfb1ab6bba608",
+  "onnx": "1.23.2",
+  "inputs": [
+    "image"
+  ],
+  "outputs": [
+    "boxes",
+    "labels",
+    "scores"
+  ],
+  "onnxruntime": "1.32.0",
+  "parity": {
+    "images": 8,
+    "max_box_abs_diff": 3.814697265625e-05,
+    "max_score_abs_diff": 2.4437904357910156e-06,
+    "label_mismatches": 0,
+    "detection_count_differences": 0,
+    "blank_image_detections": {
+      "torch": 0,
+      "onnxruntime": 0
+    },
+    "note": "outputs are compared in the model's own confidence order on the same input tensor"
+  },
+  "latency": {
+    "width": 320,
+    "height": 320,
+    "threads": 4,
+    "runs": 20,
+    "warmup": 3,
+    "torch_median_ms": 83.64850003272295,
+    "torch_p95_ms": 178.11389989219606,
+    "onnxruntime_median_ms": 24.336950038559735,
+    "onnxruntime_p95_ms": 27.425900101661682,
+    "cpu": "Intel64 Family 6 Model 154 Stepping 3, GenuineIntel",
+    "image": "synthetic_0175.png"
+  },
+  "classes": [
+    "circle",
+    "square",
+    "triangle"
+  ]
+}
